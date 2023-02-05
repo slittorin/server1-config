@@ -1,0 +1,13 @@
+# .gitignore for server1.
+
+# First rule: Ignore everything, all files in root and all directories.
+*
+*/*
+
+# Third rule: Whitelisted files, these will not be ignored.
+!*.yml
+!.gitignore
+!*.sh
+
+# Last rule: If we make a mistake above, ensure these files are ignored, otherwise your secret data/credentials will leak.
+.env

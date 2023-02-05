@@ -1,0 +1,59 @@
+version: '3'
+
+services:
+# Service: Home Assistant history database.
+# -----------------------------------------------------------------------------------
+  ha-history-db:
+# Add version number if necessary, otherwise keep 'latest'.
+#    image: influxdb:latest
+    image: influxdb:2.2.0-alpine
+    container_name: ha-history-db
+# We run in host mode to be able to be connected from HA.
+    ports:
+      - "8086:8086"
+    restart: always
+    env_file:
+      - .env
+    environment:
+      - DOCKER_INFLUXDB_INIT_MODE=setup
+      - DOCKER_INFLUXDB_INIT_USERNAME=${HA_HISTORY_DB_ROOT_USER}
+      - DOCKER_INFLUXDB_INIT_PASSWORD=${HA_HISTORY_DB_ROOT_PASSWORD}
+      - DOCKER_INFLUXDB_INIT_ORG=${HA_HISTORY_DB_ORG}
+      - DOCKER_INFLUXDB_INIT_BUCKET=${HA_HISTORY_DB_BUCKET}
+      - INFLUXDB_LOGGING_FORMAT=auto
+      - INFLUXDB_LOGGING_LEVEL=warn
+      - INFLUXDB_LOGGING_SUPPRESS_LOGO=true
+    volumes:
+      - "ha-history-db-data:/var/lib/influxdb"
+      - "ha-history-db-config:/etc/influxdb"
+      - "/srv/ha-history-db/backup:/backup"
+
+# Service: Home Assistant grafana.
+# -----------------------------------------------------------------------------------
+  ha-grafana:
+# Add version number if necessary, otherwise keep 'latest'.
+#    image: grafana/grafana:latest
+    image: grafana/grafana:8.3.3
+    container_name: ha-grafana
+# We run in host mode to be able to be connected from HA.
+    ports:
+      - "3000:3000"
+    restart: always
+    env_file:
+      - .env
+    environment:
+# This will allow you to access your Grafana dashboards without having to log in and disables a security measure that prevents you from using Grafana in an iframe.
+      - GF_AUTH_DISABLE_LOGIN_FORM=true
+      - GF_AUTH_ANONYMOUS_ENABLED=true
+      - GF_AUTH_ANONYMOUS_ORG_ROLE=Admin
+      - GF_SECURITY_ALLOW_EMBEDDING=true
+    volumes:
+      - "ha-grafana-data:/var/lib/grafana"
+      - "ha-grafana-config:/etc/grafana"
+      - "/srv/ha-grafana/backup:/backup"
+
+volumes:
+  ha-history-db-data:
+  ha-history-db-config:
+  ha-grafana-data:
+  ha-grafana-config:
