@@ -48,7 +48,7 @@ _initialize() {
 _export() {
     echo "$(date +%Y%m%d_%H%M%S): Export of influxdb for date ${date_export} started."
 
-    flux="from(bucket: \"${HA_HISTORY_DB_BUCKET}\") |> range(start: ${datetime_start}, stop: ${datetime_end}) |> filter(fn: (r) => r[\"_field\"] == \"value\")"
+    flux="from(bucket: \"${HA_HISTORY_DB_BUCKET}\") |> range(start: ${datetime_start}, stop: ${datetime_end})"
     echo "${flux}" > ${flux_file}
 
     curl --request POST "http://localhost:8086/api/v2/query?org=${HA_HISTORY_DB_ORG}&bucket=${HA_HISTORY_DB_BUCKET=}" \

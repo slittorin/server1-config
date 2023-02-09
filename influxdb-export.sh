@@ -25,7 +25,7 @@ warning_occured=0
 warning_message=""
 
 date_from="2022-02-11"
-date_to="2023-02-02"
+date_to="2023-02-07"
 
 # Get the yesterdays date.
 date_yesterday=$(date -d "yesterday" +%Y-%m-%d)
@@ -82,7 +82,7 @@ _iterate() {
 _export() {
     echo "$(date +%Y%m%d_%H%M%S): Export of influxdb for date ${date_export} started."
 
-    flux="from(bucket: \"${HA_HISTORY_DB_BUCKET}\") |> range(start: ${datetime_start}, stop: ${datetime_end}) |> filter(fn: (r) => r[\"_field\"] == \"value\")"
+    flux="from(bucket: \"${HA_HISTORY_DB_BUCKET}\") |> range(start: ${datetime_start}, stop: ${datetime_end})"
     echo "${flux}" > ${flux_file}
 
     curl --request POST "http://localhost:8086/api/v2/query?org=${HA_HISTORY_DB_ORG}&bucket=${HA_HISTORY_DB_BUCKET=}" \
@@ -165,6 +165,4 @@ _finalize() {
 # Main
 _initialize >> "${logfile}" 2>&1
 _iterate >> "${logfile}" 2>&1
-#_export >> "${logfile}" 2>&1
-#_compress >> "${logfile}" 2>&1
 _finalize >> "${logfile}" 2>&1
