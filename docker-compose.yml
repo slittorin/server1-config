@@ -27,6 +27,7 @@ services:
       - "ha-history-db-data:/var/lib/influxdb"
       - "ha-history-db-config:/etc/influxdb"
       - "/srv/ha-history-db/backup:/backup"
+      - "/srv/ha-history-db/export:/export"
       - "/srv/ha-history-db/import:/import"
 
 # Service: Home Assistant grafana.

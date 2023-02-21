@@ -15,15 +15,18 @@ fi
 # Variables:
 container="ha-history-db"
 base_dir="/srv"
+docker_compose_file="${base_dir}/docker-compose.yml"
 logfile="${base_dir}/log/influxdb-export-yesterday.log"
 logfile_tmp="${base_dir}/log/influxdb-export-yesterday.tmp"
 export_year=$(date +%Y)
 export_dir="${base_dir}/${container}/export/${export_year}/"
-flux_file="${export_dir}/flux.flux"
+export_dir_tmp="${base_dir}/${container}/export/tmp"
+flux_file="${export_dir_tmp}/flux.flux"
 error_occured=0
 error_message=""
 warning_occured=0
 warning_message=""
+header_row=",result,table,_start,_stop,_time,_value,_field,_measurement,domain,entity_id"
 
 # Get the yesterdays date.
 date_export=$(date -d "yesterday" +%Y-%m-%d)
@@ -43,6 +46,7 @@ _initialize() {
     echo "$(date +%Y%m%d_%H%M%S): Starting InfluxDB export."
 
     mkdir -p "${export_dir}"
+    mkdir -p "${export_dir_tmp}"
 }
 
 _export() {
@@ -51,40 +55,38 @@ _export() {
     flux="from(bucket: \"${HA_HISTORY_DB_BUCKET}\") |> range(start: ${datetime_start}, stop: ${datetime_end})"
     echo "${flux}" > ${flux_file}
 
-    curl --request POST "http://localhost:8086/api/v2/query?org=${HA_HISTORY_DB_ORG}&bucket=${HA_HISTORY_DB_BUCKET=}" \
-         -H "Authorization: Token ${HA_HISTORY_DB_GRAFANA_TOKEN}" \
-         -H "Accept: application/csv" \
-         -H "Content-type: application/vnd.flux" \
-         -s -S \
-         -o ${export_filename} \
-         -d @${flux_file}
+# http-api did not return the right header to be able to perform 'influx write'.
+#    curl --request POST "http://localhost:8086/api/v2/query?org=${HA_HISTORY_DB_ORG}&bucket=${HA_HISTORY_DB_BUCKET=}" \
+#         -H "Authorization: Token ${HA_HISTORY_DB_GRAFANA_TOKEN}" \
+#         -H "Accept: application/csv" \
+#         -H "Content-type: application/vnd.flux" \
+#         -s -S \
+#         -o ${export_filename} \
+#         -d @${flux_file}
+# Therefore we utilize command line instead.
+    RESULT=$(docker-compose -f "${docker_compose_file}" exec -T ha-history-db bash -c "influx query -f /export/tmp/flux.flux -r > /export/tmp/export.csv")
     RESULT_CODE=$?
     if [ ${RESULT_CODE} -ne 0 ]; then
         error_occured=1
         error_message="influx export error"
-        echo "$(date +%Y%m%d_%H%M%S): ERROR. ${error_message}. Exit code: ${RESULT_CODE}"
+        echo "$(date +%Y%m%d_%H%M%S): ERROR. ${error_message}. Exit code: ${RESULT_CODE}. Result: ${RESULT}"
     else
+        cp ${export_dir_tmp}/export.csv ${export_filename}
+
         number_rows=$(wc -l < ${export_filename})
-        echo "$(date +%Y%m%d_%H%M%S): Export of influxdb for date ${date_export} performed. Number of rows: ${number_rows}"
+        echo "$(date +%Y%m%d_%H%M%S):   Export of influxdb for date ${date_export} performed. Number of rows: ${number_rows}"
 
-        # Check if head of file is correct.
-        head_of_file=$(head -1 ${export_filename} | sed 's/\r$//' | sed 's/\n$//')
-        if [ "${head_of_file}" == ",result,table,_start,_stop,_time,_value,_field,_measurement,domain,entity_id" ]; then
-            echo "$(date +%Y%m%d_%H%M%S): Header of file is correct."
-
-            # File should be at least 1 MB large.
-            file_size=$(wc -c < ${export_filename})
-            if [ ${file_size} -ge 1048576 ]; then
-                echo "$(date +%Y%m%d_%H%M%S): File size is larger than or equal to 1 MB."
-            else
-                warning_occured=1
-                warning_message="influx export warning, size should be larger than 1 MB"
-                echo "$(date +%Y%m%d_%H%M%S): WARNING. File size is lower than 1 MB."
+        if [ ${number_rows} -gt 4 ]; then
+            headers_found=$(cat ${export_filename} | grep "${header_row}" | wc -l | awk '{ print $1 }')
+            if [ ${headers_found} -eq 0 ]; then
+                error_occured=1
+                error_message="influx query to csv"
+                echo "$(date +%Y%m%d_%H%M%S): ERROR. No headers found in the export-file."
             fi
         else
             error_occured=1
-            error_message="influx export error"
-            echo "$(date +%Y%m%d_%H%M%S): ERROR. Header of file is not correct."
+            error_message="influx query to csv"
+            echo "$(date +%Y%m%d_%H%M%S): ERROR. To few rows in the export-file, should be larger than 4."
         fi
     fi
 }
@@ -99,7 +101,7 @@ _compress() {
 	    error_message="gzip command error when compressing"
 	    echo "$(date +%Y%m%d_%H%M%S): ERROR. ${error_message}. Exit code: ${RESULT_CODE}: ${RESULT}"
 	else
-            echo "$(date +%Y%m%d_%H%M%S): Compress of backup performed."
+            echo "$(date +%Y%m%d_%H%M%S):   Compress of backup performed."
 	fi
     fi
 }
