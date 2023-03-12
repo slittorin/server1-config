@@ -161,7 +161,7 @@ _export() {
 #         -o ${export_filename} \
 #         -d @${flux_file}
 # Therefore we utilize command line instead.
-    RESULT=$(docker-compose -f "${docker_compose_file}" exec -T ha-history-db bash -c "influx query -f /export/tmp/flux.flux -r > /export/tmp/export.csv")
+    RESULT=$(docker-compose -f "${docker_compose_file}" exec -T ${container} bash -c "influx query -f /export/tmp/flux.flux -r > /export/tmp/export.csv")
     RESULT_CODE=$?
     if [ ${RESULT_CODE} -ne 0 ]; then
         warning_occured=1

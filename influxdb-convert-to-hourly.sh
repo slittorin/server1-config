@@ -153,7 +153,7 @@ error_occured=0
 error_message=""
 warning_occured=0
 warning_message=""
-debug=1						#  No debug = 0, debug = 1, more debug info = 2
+debug=0						#  No debug = 0, debug = 1, more debug info = 2
 header_row=",result,table,_start,_stop,_time,_value,_field,_measurement,domain,entity_id"
 
 _initialize() {
@@ -167,17 +167,13 @@ _initialize() {
     mkdir -p "${import_tmp_dir}"
     mkdir -p "${import_entity_dir}"
 
-    
-    if [ ${debug} -gt 0 ]; then
-        echo "Options:"
-        echo "Date from: ${options_date_from}"
-        echo "Date to: ${options_date_to}"
-        echo "From/existing entity_id: ${options_entity_id_from}"
-        echo "To/new entity_id: ${options_entity_id_to}"
-        echo "Calculation mode: ${options_calc_mode}"
-        echo "Decimals: ${options_calc_decimals}"
-    fi
-
+    echo "Options:"
+    echo "Date from: ${options_date_from}"
+    echo "Date to: ${options_date_to}"
+    echo "From/existing entity_id: ${options_entity_id_from}"
+    echo "To/new entity_id: ${options_entity_id_to}"
+    echo "Calculation mode: ${options_calc_mode}"
+    echo "Decimals: ${options_calc_decimals}"
 }
 
 _iterate() {
@@ -250,12 +246,12 @@ _export() {
 #         -o ${csv_export_file} \
 #         -d @${flux_file}
 # Therefore we utilize command line instead.
-    RESULT=$(docker-compose -f "${docker_compose_file}" exec -T ha-history-db bash -c "influx query -f /import/tmp/flux.flux -r > /import/tmp/export.csv")
+    RESULT=$(docker-compose -f "${docker_compose_file}" exec -T ${container} bash -c "influx query -f /import/tmp/flux.flux -r > /import/tmp/export.csv")
     RESULT_CODE=$?
     if [ ${RESULT_CODE} -ne 0 ]; then
         error_occured=1
         error_message="influx export error"
-        echo "$(date +%Y%m%d_%H%M%S): ERROR. ${error_message}. Exit code: ${RESULT_CODE}"
+        echo "$(date +%Y%m%d_%H%M%S): ERROR. ${error_message}. Exit code: ${RESULT_CODE}. Error: ${RESULT}"
     else
         number_rows=$(wc -l < ${csv_export_file})
         echo "$(date +%Y%m%d_%H%M%S):     Export of influxdb for date ${date_export} performed. Number of rows: ${number_rows}"
@@ -675,7 +671,7 @@ _finalize() {
     if [ ${error_occured} -eq 0 ]; then
        echo "$(date +%Y%m%d_%H%M%S): Finished InfluxDB convert to hourly. No last error."
 
-       tail -n30000 ${logfile} > ${logfile_tmp}
+       tail -n50000 ${logfile} > ${logfile_tmp}
        rm ${logfile}
        mv ${logfile_tmp} ${logfile}
 
@@ -683,7 +679,7 @@ _finalize() {
     else
        echo "$(date +%Y%m%d_%H%M%S): Exited InfluxDB convert to hourly. ERROR: ${error_message}."
 
-       tail -n30000 ${logfile} > ${logfile_tmp}
+       tail -n50000 ${logfile} > ${logfile_tmp}
        rm ${logfile}
        mv ${logfile_tmp} ${logfile}
 
