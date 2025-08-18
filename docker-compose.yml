@@ -35,7 +35,8 @@ services:
   ha-grafana:
 # Add version number if necessary, otherwise keep 'latest'.
 #    image: grafana/grafana:latest
-    image: grafana/grafana:8.3.3
+#    image: grafana/grafana:8.3.3 # Updated from 8.3.3 to 8.3.11 20250811.
+    image: grafana/grafana:8.3.11
     container_name: ha-grafana
 # We run in host mode to be able to be connected from HA.
     ports:

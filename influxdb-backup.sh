@@ -42,6 +42,10 @@ _initialize() {
 
     echo ""
     echo "$(date +%Y%m%d_%H%M%S): Starting InfluxDB backup."
+    echo "$(date +%Y%m%d_%H%M%S): Docker info:"
+    docker info
+    echo "$(date +%Y%m%d_%H%M%S): Docker image:"
+    docker ps | grep influx
 
     rm -r "${backup_dir}/"
     mkdir "${backup_dir}"

@@ -43,6 +43,10 @@ _initialize() {
 
     echo ""
     echo "$(date +%Y%m%d_%H%M%S): Starting Grafana Backup."
+    echo "$(date +%Y%m%d_%H%M%S): Docker info:"
+    docker info
+    echo "$(date +%Y%m%d_%H%M%S): Docker image:"
+    docker ps | grep grafana
 
     rm -r "${backup_dir}/"
     mkdir "${backup_dir}"
